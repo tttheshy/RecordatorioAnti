@@ -5,6 +5,12 @@ on:
     # 12:00 UTC suele ser manana en America/Santiago. El script usa America/Santiago.
     - cron: "0 12 * * *"
   workflow_dispatch:
+    inputs:
+      send_test_now:
+        description: "Enviar mensaje de prueba ahora"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -41,7 +47,12 @@ jobs:
           TARGET_DAY: ${{ vars.TARGET_DAY || '28' }}
           TIMEZONE: America/Santiago
           SENT_LOG_PATH: data/sent_reminders.json
-        run: python main.py
+        run: |
+          if [ "${{ github.event.inputs.send_test_now }}" = "true" ]; then
+            python main.py --test-now
+          else
+            python main.py
+          fi
 
       - name: Persist sent log
         run: |

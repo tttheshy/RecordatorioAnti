@@ -64,6 +64,14 @@ def _build_message(fecha_aplicacion: date, days_left: int) -> str:
     )
 
 
+def _build_test_message(now: datetime) -> str:
+    return (
+        "Prueba de recordatorio CESFAM: el sistema automatico de WhatsApp "
+        f"esta funcionando correctamente. Fecha de prueba: "
+        f"{now.strftime('%d-%m-%Y %H:%M')}."
+    )
+
+
 def _load_sent_log(path: Path) -> dict[str, list[str]]:
     if not path.exists():
         return {}
@@ -127,6 +135,27 @@ def _find_current_reminder(today: date, target_day: int) -> tuple[date, int] | N
     return None
 
 
+def send_test_message(settings: Settings, dry_run: bool = False) -> int:
+    zone = ZoneInfo(settings.timezone)
+    now = datetime.now(zone)
+    message = _build_test_message(now)
+    from twilio.rest import Client
+
+    client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
+
+    for recipient in settings.whatsapp_to_numbers:
+        sid = enviar_whatsapp(
+            client=client,
+            from_number=settings.whatsapp_from,
+            to_number=recipient,
+            message=message,
+            dry_run=dry_run,
+        )
+        print(f"Mensaje de prueba enviado a {recipient}. SID: {sid}")
+
+    return 0
+
+
 def run(settings: Settings, today: date | None = None, dry_run: bool = False) -> int:
     zone = ZoneInfo(settings.timezone)
     today = today or datetime.now(zone).date()
@@ -179,9 +208,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Muestra los mensajes sin enviarlos por Twilio",
     )
+    parser.add_argument(
+        "--test-now",
+        action="store_true",
+        help="Envia un mensaje de prueba inmediatamente",
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
+    if args.test_now:
+        raise SystemExit(send_test_message(get_settings(), dry_run=args.dry_run))
     raise SystemExit(run(get_settings(), dry_run=args.dry_run))
