@@ -1,0 +1,60 @@
+name: WhatsApp CESFAM Reminder
+
+on:
+  schedule:
+    # 12:00 UTC suele ser manana en America/Santiago. El script usa America/Santiago.
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: whatsapp-cesfam-reminder
+  cancel-in-progress: false
+
+jobs:
+  send-reminder:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+      - name: Send WhatsApp reminder
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          WHATSAPP_FROM: ${{ secrets.WHATSAPP_FROM }}
+          WHATSAPP_TO_NUMBERS: ${{ secrets.WHATSAPP_TO_NUMBERS }}
+          TARGET_DAY: ${{ vars.TARGET_DAY || '28' }}
+          TIMEZONE: America/Santiago
+          SENT_LOG_PATH: data/sent_reminders.json
+        run: python main.py
+
+      - name: Persist sent log
+        run: |
+          if [ ! -f data/sent_reminders.json ]; then
+            echo "No sent log was created."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/sent_reminders.json
+          if git diff --cached --quiet; then
+            echo "No sent-log changes to commit."
+          else
+            git commit -m "Update WhatsApp reminder sent log"
+            git push
+          fi
