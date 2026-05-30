@@ -57,9 +57,10 @@ def _format_days_left(days_left: int) -> str:
 
 def _build_message(fecha_aplicacion: date, days_left: int) -> str:
     return (
-        "Recordatorio CESFAM: la fecha recomendada para la aplicacion mensual "
-        f"del anticonceptivo es {fecha_aplicacion.strftime('%d-%m-%Y')}. "
-        f"{_format_days_left(days_left)}. "
+        "Hola tilina, recuerda que "
+        f"{_format_days_left(days_left)} para tu aplicacion mensual "
+        "del anticonceptivo en el CESFAM. "
+        f"La fecha recomendada es {fecha_aplicacion.strftime('%d-%m-%Y')}. "
         "Por favor confirma o asiste al CESFAM."
     )
 
