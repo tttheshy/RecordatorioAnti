@@ -23,9 +23,26 @@ def _parse_target_day() -> int:
     return target_day
 
 
+def _normalize_whatsapp_number(number: str, env_name: str) -> str:
+    normalized = number.strip().replace(" ", "")
+    if normalized.startswith("whatsapp:"):
+        normalized = normalized.removeprefix("whatsapp:")
+
+    if not normalized.startswith("+"):
+        raise RuntimeError(
+            f"{env_name} debe usar formato internacional, por ejemplo whatsapp:+56912345678"
+        )
+
+    return f"whatsapp:{normalized}"
+
+
 def _parse_recipients() -> list[str]:
     raw_value = _get_required_env("WHATSAPP_TO_NUMBERS")
-    recipients = [number.strip() for number in raw_value.split(",") if number.strip()]
+    recipients = [
+        _normalize_whatsapp_number(number, "WHATSAPP_TO_NUMBERS")
+        for number in raw_value.split(",")
+        if number.strip()
+    ]
     if not recipients:
         raise RuntimeError("WHATSAPP_TO_NUMBERS debe incluir al menos un numero")
     return recipients
@@ -46,7 +63,10 @@ def get_settings() -> Settings:
     return Settings(
         twilio_account_sid=_get_required_env("TWILIO_ACCOUNT_SID"),
         twilio_auth_token=_get_required_env("TWILIO_AUTH_TOKEN"),
-        whatsapp_from=_get_required_env("WHATSAPP_FROM"),
+        whatsapp_from=_normalize_whatsapp_number(
+            _get_required_env("WHATSAPP_FROM"),
+            "WHATSAPP_FROM",
+        ),
         whatsapp_to_numbers=_parse_recipients(),
         target_day=_parse_target_day(),
         timezone=os.getenv("TIMEZONE", "America/Santiago"),
